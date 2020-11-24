@@ -1,0 +1,28 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	0.0.0	//
+GCC	./Makefile	/^GCC := gcc$/;"	m
+KEYBOARD	./kbdmouse.c	/^	KEYBOARD,$/;"	e	enum:__anon0426586d0103	file:
+LIBS	./Makefile	/^LIBS := $/;"	m
+MOUSE_BTN	./kbdmouse.c	/^	MOUSE_BTN,$/;"	e	enum:__anon0426586d0103	file:
+MOUSE_MOV	./kbdmouse.c	/^	MOUSE_MOV,$/;"	e	enum:__anon0426586d0103	file:
+NONE	./kbdmouse.c	/^	NONE$/;"	e	enum:__anon0426586d0103	file:
+RESULTDIR	./Makefile	/^RESULTDIR := .\/compile$/;"	m
+VALUE_MOUSE_MOVE_X	./kbdmouse.c	/^#define VALUE_MOUSE_MOVE_X /;"	d	file:
+VALUE_MOUSE_MOVE_Y	./kbdmouse.c	/^#define VALUE_MOUSE_MOVE_Y /;"	d	file:
+__anon0426586d0103	./kbdmouse.c	/^typedef enum{$/;"	g	file:
+build	./Makefile	/^build:$/;"	t
+device_type	./kbdmouse.c	/^} device_type;$/;"	t	typeref:enum:__anon0426586d0103	file:
+distination	./kbdmouse.c	/^	device_type distination;$/;"	m	struct:event_result	typeref:typename:device_type	file:
+event_1	./kbdmouse.c	/^	struct input_event event_1;$/;"	m	struct:event_result	typeref:struct:input_event	file:
+event_2	./kbdmouse.c	/^	struct input_event event_2;\/\/for mouse(2nd axis) if dist is KEYBOARD or MOUSE_BTN, do NOT acc/;"	m	struct:event_result	typeref:struct:input_event	file:
+event_result	./kbdmouse.c	/^struct event_result{$/;"	s	file:
+input_event_NULL	./kbdmouse.c	/^const struct input_event input_event_NULL={.type=0,.code=0,.value=0};$/;"	v	typeref:typename:const struct input_event
+main	./kbdmouse.c	/^int main(int argc,char *argv[]){$/;"	f	typeref:typename:int
+prep_for_quit	./kbdmouse.c	/^void prep_for_quit(int fds_to_close[]){$/;"	f	typeref:typename:void
+process_input_event	./kbdmouse.c	/^void process_input_event(struct input_event event_to_process,struct event_result *result){$/;"	f	typeref:typename:void
+reset_event_result	./kbdmouse.c	/^inline void reset_event_result(struct event_result *to_reset){$/;"	f	typeref:typename:void
