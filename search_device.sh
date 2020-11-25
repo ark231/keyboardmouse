@@ -18,11 +18,12 @@ do
 	fi
 done< <(cat /proc/bus/input/devices |grep -e'N:\|H:\|B: EV\|^$')
 
-for((i=0;i<${#keyboards_names[@]};i++))
-do
-	echo ${keyboards_names[$i]}
-done
+#for((i=0;i<${#keyboards_names[@]};i++))
+#do
+#	echo ${keyboards_names[$i]}
+#done
+
 for((j=0;j<${#keyboards_handlers[@]};j++))
 do
-	echo ${keyboards_handlers[$j]}
+	echo -n "/dev/input/$(echo ${keyboards_handlers[$j]}|sed -e"s/[\r\n]//g" ) "
 done
