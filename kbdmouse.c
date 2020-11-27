@@ -8,20 +8,32 @@
 //#define KEYBOARD "/dev/input/keyboard_with_tenkey"
 typedef enum{
 	KEYBOARD,
-	MOUSE_MOV,
-	MOUSE_BTN,
+	//MOUSE,
+	MOUSE_MOV,//no pause between events
+	MOUSE_BTN,//some pause between events
 	NONE
 } device_type;
 
+typedef enum{
+	LEFT = BTN_LEFT,
+	MIDDLE =  BTN_MIDDLE,
+	RIGHT = BTN_RIGHT
+} mouse_btn_type;
+
 struct event_result{
+	/*
 	struct input_event event_1;
 	struct input_event event_2;//for mouse(2nd axis) if dist is KEYBOARD or MOUSE_BTN, do NOT access because this'll not be initialized
+	*/
+	struct input_event events[4];//max when double click
 	device_type distination;
+	int num_events;
 };
 
 void prep_for_quit(int[]);
 void process_input_event(struct input_event,struct event_result*);
- void reset_event_result(struct event_result*);
+void clear_event_result(struct event_result*);
+void set_input_event(struct input_event*,int,int,int);
 //void signal_handler(void);
 
 int main(int argc,char *argv[]){
@@ -96,70 +108,161 @@ int main(int argc,char *argv[]){
 #define VALUE_MOUSE_MOVE_Y 1
 
 void process_input_event(struct input_event event_to_process,struct event_result *result){
-	reset_event_result(result);
+	static mouse_btn_type selected_btn = LEFT;
+	clear_event_result(result);
 	if(event_to_process.type==EV_KEY){
 		switch(event_to_process.code){
 			case KEY_KP0:
-				printf(" KEY_KP0\n");
-				result->distination = MOUSE_BTN;
-				result->event_1.type = EV_KEY;
-				result->event_1.code = BTN_LEFT;
-				result->event_1.value = 1;
+				if(event_to_process.value == 1){
+					printf(" KEY_KP0\n");
+					result->distination = MOUSE_BTN;
+					result->num_events = 1;
+					set_input_event(&(result->events[0]),EV_KEY,BTN_LEFT,1);
+				}
 				break;
 			case KEY_KP1:
-				printf(" KEY_KP1\n");
-				result->distination = MOUSE_MOV;
-				result->event_1.type = EV_REL;
-				result->event_1.code = REL_X;
-				result->event_1.value = -VALUE_MOUSE_MOVE_X;
-				result->event_2.type = EV_REL;
-				result->event_2.code = REL_Y;
-				result->event_2.value = -VALUE_MOUSE_MOVE_Y;
+				if(event_to_process.value != 0){
+					printf(" KEY_KP1\n");
+					result->distination = MOUSE_MOV;
+					result->num_events = 2;
+					set_input_event(&(result->events[0]),EV_REL,REL_X,-VALUE_MOUSE_MOVE_X);
+					set_input_event(&(result->events[1]),EV_REL,REL_Y,-VALUE_MOUSE_MOVE_Y);
+				}
 				break;
 			case KEY_KP2:
-				printf(" KEY_KP2\n");
-				result->distination = MOUSE_MOV;
-				result->event_1.type = EV_REL;
-				result->event_1.code = REL_X;
-				result->event_1.value = 0;
-				result->event_2.type = EV_REL;
-				result->event_2.code = REL_Y;
-				result->event_2.value = -VALUE_MOUSE_MOVE_Y;
+				if(event_to_process.value != 0){
+					printf(" KEY_KP2\n");
+					result->distination = MOUSE_MOV;
+					result->num_events = 2;
+					set_input_event(&(result->events[0]),EV_REL,REL_X,0);
+					set_input_event(&(result->events[1]),EV_REL,REL_Y,-VALUE_MOUSE_MOVE_Y);
+				}
 				break;
 			case KEY_KP3:
-				printf(" KEY_KP3\n");
-				result->distination = MOUSE_MOV;
-				result->event_1.type = EV_REL;
-				result->event_1.code = REL_X;
-				result->event_1.value = VALUE_MOUSE_MOVE_X;
-				result->event_2.type = EV_REL;
-				result->event_2.code = REL_Y;
-				result->event_2.value = -VALUE_MOUSE_MOVE_Y;
+				if(event_to_process.value != 0){
+					printf(" KEY_KP3\n");
+					result->distination = MOUSE_MOV;
+					result->num_events = 2;
+					set_input_event(&(result->events[0]),EV_REL,REL_X,VALUE_MOUSE_MOVE_X);
+					set_input_event(&(result->events[1]),EV_REL,REL_Y,-VALUE_MOUSE_MOVE_Y);
+				}
 				break;
 			case KEY_KP4:
-				printf(" KEY_KP4\n");
-				result->distination = MOUSE_MOV;
-				result->event_1.type = EV_REL;
-				result->event_1.code = REL_X;
-				result->event_1.value = -VALUE_MOUSE_MOVE_X;
-				result->event_2.type = EV_REL;
-				result->event_2.code = REL_Y;
-				result->event_2.value = 0;
+				if(event_to_process.value != 0){
+					printf(" KEY_KP4\n");
+					result->distination = MOUSE_MOV;
+					result->num_events = 2;
+					set_input_event(&(result->events[0]),EV_REL,REL_X,-VALUE_MOUSE_MOVE_X);
+					set_input_event(&(result->events[1]),EV_REL,REL_Y,0);
+				}
+				break;
+			case KEY_KP5:
+				if(event_to_process.value == 1){
+					printf(" KEY_KP5\n");
+					result->distination = MOUSE_BTN;
+					result->num_events = 2;
+					set_input_event(&(result->events[0]),EV_KEY,selected_btn,1);
+					set_input_event(&(result->events[1]),EV_KEY,selected_btn,0);
+				}
+				break;
+			case KEY_KP6:
+				if(event_to_process.value != 0){
+					printf(" KEY_KP6\n");
+					result->distination = MOUSE_MOV;
+					result->num_events = 2;
+					set_input_event(&(result->events[0]),EV_REL,REL_X,VALUE_MOUSE_MOVE_X);
+					set_input_event(&(result->events[1]),EV_REL,REL_Y,0);
+				}
+				break;
+			case KEY_KP7:
+				if(event_to_process.value != 0){
+					printf(" KEY_KP7\n");
+					result->distination = MOUSE_MOV;
+					result->num_events = 2;
+					set_input_event(&(result->events[0]),EV_REL,REL_X,-VALUE_MOUSE_MOVE_X);
+					set_input_event(&(result->events[1]),EV_REL,REL_Y,VALUE_MOUSE_MOVE_Y);
+				}
+				break;
+			case KEY_KP8:
+				if(event_to_process.value != 0){
+					printf(" KEY_KP8\n");
+					result->distination = MOUSE_MOV;
+					result->num_events = 2;
+					set_input_event(&(result->events[0]),EV_REL,REL_X,0);
+					set_input_event(&(result->events[1]),EV_REL,REL_Y,VALUE_MOUSE_MOVE_Y);
+				}
+				break;
+			case KEY_KP9:
+				if(event_to_process.value != 0){
+					printf(" KEY_KP9\n");
+					result->distination = MOUSE_MOV;
+					result->num_events = 2;
+					set_input_event(&(result->events[0]),EV_REL,REL_X,VALUE_MOUSE_MOVE_X);
+					set_input_event(&(result->events[1]),EV_REL,REL_Y,VALUE_MOUSE_MOVE_Y);
+				}
+				break;
+			case KEY_KPDOT:
+				if(event_to_process.value == 1){
+					printf(" KEY_KPDOT\n");
+					result->distination = MOUSE_BTN;
+					result->num_events = 1;
+					set_input_event(&(result->events[0]),EV_KEY,BTN_LEFT,0);
+				}
+				break;
+			case KEY_KPSLASH:
+				if(event_to_process.value == 1){
+					printf(" KEY_KPSLASH\n");
+					result->num_events = 0;
+					selected_btn = LEFT;
+				}
+				break;
+			case KEY_KPASTERISK:
+				if(event_to_process.value == 1){
+					printf(" KEY_KPASTERISK\n");
+					result->num_events = 0;
+					selected_btn = MIDDLE;
+				}
+				break;
+			case KEY_KPMINUS:
+				if(event_to_process.value == 1){
+					printf(" KEY_KPMINUS\n");
+					result->num_events = 0;
+					selected_btn = RIGHT;
+				}
+				break;
+			case KEY_KPPLUS:
+				if(event_to_process.value == 1){
+					printf(" KEY_KPPLUS\n");
+					result->distination = MOUSE_BTN;
+					result->num_events = 4;
+					set_input_event(&(result->events[0]),EV_KEY,selected_btn,1);
+					set_input_event(&(result->events[1]),EV_KEY,selected_btn,0);
+					set_input_event(&(result->events[2]),EV_KEY,selected_btn,1);
+					set_input_event(&(result->events[3]),EV_KEY,selected_btn,0);
+				}
 				break;
 			default:
 				printf(" else\n");
 				result->distination = KEYBOARD;
-				result->event_1 = event_to_process;
+				result->num_events = 1;
+				result->events[0] = event_to_process;
 				break;
 		}
 	}
 }
 
+void set_input_event(struct input_event *to_set,int type,int code,int value){
+	to_set->type=type;
+	to_set->code=code;
+	to_set->value=value;
+}
+
 const struct input_event input_event_NULL={.type=0,.code=0,.value=0};
- void reset_event_result(struct event_result *to_reset){
-	to_reset->distination = NONE;
-	to_reset->event_1 = input_event_NULL;
-	to_reset->event_2 = input_event_NULL;
+void clear_event_result(struct event_result *to_clear){
+	to_clear->distination = NONE;
+	for(int i=0;i<4;i++){
+		to_clear->events[i] = input_event_NULL;
+	}
 }
 
 void prep_for_quit(int fds_to_close[]){
