@@ -21,20 +21,25 @@ typedef enum{
 } mouse_btn_type;
 
 struct event_result{
-	/*
-	struct input_event event_1;
-	struct input_event event_2;//for mouse(2nd axis) if dist is KEYBOARD or MOUSE_BTN, do NOT access because this'll not be initialized
-	*/
 	struct input_event events[4];//max when double click
 	device_type distination;
 	int num_events;
 };
 
+typedef struct {
+	bool Shift_is_pressed;
+	bool Alt_is_pressed;
+	bool NumLock_is_pressed;
+} exit_shortcut;
+
 void prep_for_quit(int[]);
 void process_input_event(struct input_event,struct event_result*);
 void clear_event_result(struct event_result*);
+void clear_shortcut_flags(exit_shortcut*);
 void set_input_event(struct input_event*,int,int,int);
 //void signal_handler(void);
+
+bool requested_exit = false;//when true, mainloop will end
 
 int main(int argc,char *argv[]){
 	/*
@@ -42,7 +47,6 @@ int main(int argc,char *argv[]){
 	int kbd_eventfile_test = open("/dev/input/event3",O_RDONLY|O_NONBLOCK);
 	ioctl(kbd_eventfile,EVIOCGRAB,1);
 	*/
-	bool wanted_key_pressed = false;
 
 	/*open and check device files*/
 	int *kbd_eventfiles;
@@ -85,7 +89,7 @@ int main(int argc,char *argv[]){
 	}
 	/*open and check device files end*/
 	/*mainloop*/
-	while(wanted_key_pressed == false){
+	while(requested_exit == false){
 		for(int j=0;j<num_usable_kbd_evfl;j++){
 			if(read(kbd_eventfiles[j],&events[j],sizeof(struct input_event))<sizeof(struct input_event)){
 				prep_for_quit(kbd_eventfiles);
@@ -93,9 +97,9 @@ int main(int argc,char *argv[]){
 				exit(EXIT_FAILURE);
 			}
 			process_input_event(events[j],&results[j]);
-			if(results[j].distination==MOUSE_MOV){
-				wanted_key_pressed=true;
-			}
+			/*if(results[j].distination==MOUSE_MOV){
+				requested_exit=true;
+			}*/
 		}
 	}
 	/*meinloop end*/
@@ -109,10 +113,12 @@ int main(int argc,char *argv[]){
 
 void process_input_event(struct input_event event_to_process,struct event_result *result){
 	static mouse_btn_type selected_btn = LEFT;
+	static exit_shortcut flags_pressed = {.Shift_is_pressed = false,.Alt_is_pressed = false,.NumLock_is_pressed = false};//in this method, user can quit by pressing three keys on different keyboards, but I dont care because it wont be so much probrem
 	clear_event_result(result);
 	if(event_to_process.type==EV_KEY){
 		switch(event_to_process.code){
 			case KEY_KP0:
+				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value == 1){
 					printf(" KEY_KP0\n");
 					result->distination = MOUSE_BTN;
@@ -121,6 +127,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				}
 				break;
 			case KEY_KP1:
+				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
 					printf(" KEY_KP1\n");
 					result->distination = MOUSE_MOV;
@@ -130,6 +137,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				}
 				break;
 			case KEY_KP2:
+				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
 					printf(" KEY_KP2\n");
 					result->distination = MOUSE_MOV;
@@ -139,6 +147,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				}
 				break;
 			case KEY_KP3:
+				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
 					printf(" KEY_KP3\n");
 					result->distination = MOUSE_MOV;
@@ -148,6 +157,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				}
 				break;
 			case KEY_KP4:
+				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
 					printf(" KEY_KP4\n");
 					result->distination = MOUSE_MOV;
@@ -157,6 +167,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				}
 				break;
 			case KEY_KP5:
+				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value == 1){
 					printf(" KEY_KP5\n");
 					result->distination = MOUSE_BTN;
@@ -166,6 +177,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				}
 				break;
 			case KEY_KP6:
+				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
 					printf(" KEY_KP6\n");
 					result->distination = MOUSE_MOV;
@@ -175,6 +187,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				}
 				break;
 			case KEY_KP7:
+				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
 					printf(" KEY_KP7\n");
 					result->distination = MOUSE_MOV;
@@ -184,6 +197,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				}
 				break;
 			case KEY_KP8:
+				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
 					printf(" KEY_KP8\n");
 					result->distination = MOUSE_MOV;
@@ -193,6 +207,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				}
 				break;
 			case KEY_KP9:
+				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
 					printf(" KEY_KP9\n");
 					result->distination = MOUSE_MOV;
@@ -202,6 +217,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				}
 				break;
 			case KEY_KPDOT:
+				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value == 1){
 					printf(" KEY_KPDOT\n");
 					result->distination = MOUSE_BTN;
@@ -210,6 +226,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				}
 				break;
 			case KEY_KPSLASH:
+				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value == 1){
 					printf(" KEY_KPSLASH\n");
 					result->num_events = 0;
@@ -217,6 +234,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				}
 				break;
 			case KEY_KPASTERISK:
+				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value == 1){
 					printf(" KEY_KPASTERISK\n");
 					result->num_events = 0;
@@ -224,6 +242,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				}
 				break;
 			case KEY_KPMINUS:
+				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value == 1){
 					printf(" KEY_KPMINUS\n");
 					result->num_events = 0;
@@ -231,6 +250,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				}
 				break;
 			case KEY_KPPLUS:
+				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value == 1){
 					printf(" KEY_KPPLUS\n");
 					result->distination = MOUSE_BTN;
@@ -241,7 +261,59 @@ void process_input_event(struct input_event event_to_process,struct event_result
 					set_input_event(&(result->events[3]),EV_KEY,selected_btn,0);
 				}
 				break;
+			case KEY_LEFTSHIFT:
+				if(event_to_process.value != 0){
+					if(flags_pressed.Alt_is_pressed == true && flags_pressed.NumLock_is_pressed == true){
+						requested_exit = true;
+					}else{
+						flags_pressed.Shift_is_pressed = true;
+						result->distination = KEYBOARD;
+						result->num_events = 1;
+						result->events[0] = event_to_process;
+					}
+				}else{
+					clear_shortcut_flags(&flags_pressed);
+					result->distination = KEYBOARD;
+					result->num_events = 1;
+					result->events[0] = event_to_process;
+				}
+				break;
+			case KEY_LEFTALT:
+				if(event_to_process.value != 0){
+					if(flags_pressed.Shift_is_pressed == true && flags_pressed.NumLock_is_pressed == true){
+						requested_exit = true;
+					}else{
+						flags_pressed.Alt_is_pressed= true;
+						result->distination = KEYBOARD;
+						result->num_events = 1;
+						result->events[0] = event_to_process;
+					}
+				}else{
+					clear_shortcut_flags(&flags_pressed);
+					result->distination = KEYBOARD;
+					result->num_events = 1;
+					result->events[0] = event_to_process;
+				}
+				break;
+			case KEY_NUMLOCK:
+				if(event_to_process.value != 0){
+					if(flags_pressed.Shift_is_pressed == true && flags_pressed.Alt_is_pressed== true){
+						requested_exit = true;
+					}else{
+						flags_pressed.NumLock_is_pressed= true;
+						result->distination = KEYBOARD;
+						result->num_events = 1;
+						result->events[0] = event_to_process;
+					}
+				}else{
+					clear_shortcut_flags(&flags_pressed);
+					result->distination = KEYBOARD;
+					result->num_events = 1;
+					result->events[0] = event_to_process;
+				}
+				break;
 			default:
+				clear_shortcut_flags(&flags_pressed);
 				printf(" else\n");
 				result->distination = KEYBOARD;
 				result->num_events = 1;
@@ -258,11 +330,18 @@ void set_input_event(struct input_event *to_set,int type,int code,int value){
 }
 
 const struct input_event input_event_NULL={.type=0,.code=0,.value=0};
-void clear_event_result(struct event_result *to_clear){
+inline void clear_event_result(struct event_result *to_clear){
 	to_clear->distination = NONE;
+	to_clear->num_events = 0;
 	for(int i=0;i<4;i++){
 		to_clear->events[i] = input_event_NULL;
 	}
+}
+
+inline void clear_shortcut_flags(exit_shortcut *to_clear){
+	to_clear->Shift_is_pressed = false;
+	to_clear->Alt_is_pressed = false;
+	to_clear->NumLock_is_pressed = false;
 }
 
 void prep_for_quit(int fds_to_close[]){
