@@ -9,6 +9,7 @@
 #include<libevdev/libevdev-uinput.h>
 #include<unistd.h>
 #include<memory.h>
+#include<getopt.h>
 #define sec 1000000
 #define milli_sec 1000
 #define micro_sec 1
@@ -38,8 +39,13 @@ typedef struct {
 	bool NumLock_is_pressed;
 } exit_shortcut;
 
+typedef struct{
+	int X;
+	int Y;
+}X_Y_vector;
+
 //void //prep_for_quit(int ,struct libevdev_uinput[],struct libevdev_uinput[]);
-void process_input_event(struct input_event,struct event_result*);
+void process_input_event(struct input_event,struct event_result*,X_Y_vector*);
 void clear_event_result(struct event_result*);
 void clear_shortcut_flags(exit_shortcut*);
 void set_input_event(struct input_event*,int,int,int);
@@ -49,28 +55,62 @@ int find_max_fd(int[],int);
 bool requested_exit = false;//when true, mainloop will end
 
 int main(int argc,char *argv[]){
-	/*
-	ioctl(kbd_eventfile,EVIOCGRAB,1);
-	*/
-
+	/*process args*/
+	struct option longopts[]={
+		{"mov_X",required_argument,0,'X'},
+		{"mov_Y",required_argument,0,'Y'},
+		{      0,                0,0, 0 },
+	};
+	int idx_lngopt=0;
+	int val_opt=0;
+	X_Y_vector value_mouse_move={.X = 5,.Y = 5};
+	while((val_opt=getopt_long(argc,argv,"X:Y:",longopts,&idx_lngopt))!=-1){
+		char *err=NULL;
+		switch(val_opt){
+			case 'X':
+				{
+				//printf("opt_val%s\n",optarg);
+				int X_mov_tmp=(int)strtol(optarg,&err,0);
+				if(*err != '\n' && *err != '\0'){
+					printf("error: invalid value %s\n",optarg);
+				}else{
+					value_mouse_move.X=X_mov_tmp;
+				}
+				break;
+				 }
+			case 'Y':
+				{
+				//printf("opt_val%s\n",optarg);
+				int Y_mov_tmp=(int)strtol(optarg,&err,0);
+				if(*err != '\n' && *err != '\0'){
+					printf("error: invalid value %s\n",optarg);
+				}else{
+					value_mouse_move.Y=Y_mov_tmp;
+				}
+				break;
+				}
+			case '?':
+				printf("error\n");
+				break;
+		}
+	}
 	/*open and check device files*/
 	int *kbd_eventfiles=NULL;
 	int *kbd_uinputfiles=NULL;
 	fd_set readfds ,kbd_allfds;
-	//int num_usable_kbd_evfl = argc-1;
 	int num_usable_kbd_evfl=0;
 	FD_ZERO(&kbd_allfds);
-	if(argc == 1){
+	if(optind == argc){
 		fprintf(stderr,"error: no device file specified\n");
 		exit(EXIT_FAILURE);
 	}else{
-		if ((kbd_eventfiles = (int*)malloc(sizeof(int)*(argc-1))) == NULL){
+		if ((kbd_eventfiles = (int*)malloc(sizeof(int)*(argc-optind))) == NULL){
 			fprintf(stderr,"error: cannot malloc kbd_eventfiles\n");
 			exit(EXIT_FAILURE);
 		}
 		int fd_tmp=-1;
-		for(int i=1;i<=(argc-1);i++){
-			fd_tmp=open(argv[i],O_RDONLY);//block in order to reduce cpu usage
+		while (optind < argc){
+			fd_tmp=open(argv[optind],O_RDONLY);//block in order to reduce cpu usage
 			if(fd_tmp==-1){
 				continue;
 			}else{
@@ -79,6 +119,7 @@ int main(int argc,char *argv[]){
 				FD_SET(fd_tmp, &kbd_allfds);
 				num_usable_kbd_evfl++;
 			}
+			optind++;
 		}
 		if(num_usable_kbd_evfl<=0){
 			fprintf(stderr,"error: no usable device file\n");
@@ -166,7 +207,7 @@ int main(int argc,char *argv[]){
 					//prep_for_quit(num_usable_kbd_evfl,kbd_uidevs,mouse_uidev);
 					exit(EXIT_FAILURE);
 				}
-				process_input_event(events[j],&results[j]);
+				process_input_event(events[j],&results[j],&value_mouse_move);
 				switch(results[j].distination){
 					case KEYBOARD:
 						for(int l=0;l<results[j].num_events;l++){
@@ -191,7 +232,11 @@ int main(int argc,char *argv[]){
 								fprintf(stderr,"error: failed to write event\n");
 								exit(EXIT_FAILURE);
 							}
-							usleep(20*micro_sec);
+							if(results[j].num_events==4 && l%2==1){
+								usleep(50*milli_sec);
+							}else{
+								usleep(20*micro_sec);
+							}
 						}
 						break;
 					case MOUSE_MOV:
@@ -218,10 +263,10 @@ int main(int argc,char *argv[]){
 	//prep_for_quit(num_usable_kbd_evfl,kbd_uidevs,mouse_uidev);
 	return 0;
 }
-#define VALUE_MOUSE_MOVE_X 5
-#define VALUE_MOUSE_MOVE_Y -5
+//#define VALUE_MOUSE_MOVE_X 5
+//#define VALUE_MOUSE_MOVE_Y 5
 
-void process_input_event(struct input_event event_to_process,struct event_result *result){
+void process_input_event(struct input_event event_to_process,struct event_result *result,X_Y_vector *val_mouse_mov){
 	static mouse_btn_type selected_btn = LEFT;
 	static exit_shortcut flags_pressed = {.Shift_is_pressed = false,.Alt_is_pressed = false,.NumLock_is_pressed = false};//in this method, user can quit by pressing three keys on different keyboards, but I dont care because it wont be so much probrem
 	clear_event_result(result);
@@ -242,8 +287,8 @@ void process_input_event(struct input_event event_to_process,struct event_result
 					//printf(" KEY_KP1\n");
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
-					set_input_event(&(result->events[0]),EV_REL,REL_X,-VALUE_MOUSE_MOVE_X);
-					set_input_event(&(result->events[1]),EV_REL,REL_Y,-VALUE_MOUSE_MOVE_Y);
+					set_input_event(&(result->events[0]),EV_REL,REL_X,-val_mouse_mov->X);
+					set_input_event(&(result->events[1]),EV_REL,REL_Y,val_mouse_mov->Y);
 				}
 				break;
 			case KEY_KP2:
@@ -253,7 +298,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
 					set_input_event(&(result->events[0]),EV_REL,REL_X,0);
-					set_input_event(&(result->events[1]),EV_REL,REL_Y,-VALUE_MOUSE_MOVE_Y);
+					set_input_event(&(result->events[1]),EV_REL,REL_Y,val_mouse_mov->Y);
 				}
 				break;
 			case KEY_KP3:
@@ -262,8 +307,8 @@ void process_input_event(struct input_event event_to_process,struct event_result
 					//printf(" KEY_KP3\n");
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
-					set_input_event(&(result->events[0]),EV_REL,REL_X,VALUE_MOUSE_MOVE_X);
-					set_input_event(&(result->events[1]),EV_REL,REL_Y,-VALUE_MOUSE_MOVE_Y);
+					set_input_event(&(result->events[0]),EV_REL,REL_X,val_mouse_mov->X);
+					set_input_event(&(result->events[1]),EV_REL,REL_Y,val_mouse_mov->Y);
 				}
 				break;
 			case KEY_KP4:
@@ -272,7 +317,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 					//printf(" KEY_KP4\n");
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
-					set_input_event(&(result->events[0]),EV_REL,REL_X,-VALUE_MOUSE_MOVE_X);
+					set_input_event(&(result->events[0]),EV_REL,REL_X,-val_mouse_mov->X);
 					set_input_event(&(result->events[1]),EV_REL,REL_Y,0);
 				}
 				break;
@@ -292,7 +337,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 					//printf(" KEY_KP6\n");
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
-					set_input_event(&(result->events[0]),EV_REL,REL_X,VALUE_MOUSE_MOVE_X);
+					set_input_event(&(result->events[0]),EV_REL,REL_X,val_mouse_mov->X);
 					set_input_event(&(result->events[1]),EV_REL,REL_Y,0);
 				}
 				break;
@@ -302,8 +347,8 @@ void process_input_event(struct input_event event_to_process,struct event_result
 					//printf(" KEY_KP7\n");
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
-					set_input_event(&(result->events[0]),EV_REL,REL_X,-VALUE_MOUSE_MOVE_X);
-					set_input_event(&(result->events[1]),EV_REL,REL_Y,VALUE_MOUSE_MOVE_Y);
+					set_input_event(&(result->events[0]),EV_REL,REL_X,-val_mouse_mov->X);
+					set_input_event(&(result->events[1]),EV_REL,REL_Y,-val_mouse_mov->Y);
 				}
 				break;
 			case KEY_KP8:
@@ -313,7 +358,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
 					set_input_event(&(result->events[0]),EV_REL,REL_X,0);
-					set_input_event(&(result->events[1]),EV_REL,REL_Y,VALUE_MOUSE_MOVE_Y);
+					set_input_event(&(result->events[1]),EV_REL,REL_Y,-val_mouse_mov->Y);
 				}
 				break;
 			case KEY_KP9:
@@ -322,8 +367,8 @@ void process_input_event(struct input_event event_to_process,struct event_result
 					//printf(" KEY_KP9\n");
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
-					set_input_event(&(result->events[0]),EV_REL,REL_X,VALUE_MOUSE_MOVE_X);
-					set_input_event(&(result->events[1]),EV_REL,REL_Y,VALUE_MOUSE_MOVE_Y);
+					set_input_event(&(result->events[0]),EV_REL,REL_X,val_mouse_mov->X);
+					set_input_event(&(result->events[1]),EV_REL,REL_Y,-val_mouse_mov->Y);
 				}
 				break;
 			case KEY_KPDOT:
