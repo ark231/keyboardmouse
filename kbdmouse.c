@@ -5,13 +5,18 @@
 #include<sys/stat.h>
 #include<fcntl.h>
 #include<stdbool.h>
-//#define KEYBOARD "/dev/input/keyboard_with_tenkey"
+#include<libevdev/libevdev.h>
+#include<libevdev/libevdev-uinput.h>
+#include<unistd.h>
+#define sec 1000000
+#define milli_sec 1000
+#define micro_sec 1
 typedef enum{
 	KEYBOARD,
 	//MOUSE,
 	MOUSE_MOV,//no pause between events
 	MOUSE_BTN,//some pause between events
-	NONE
+	NOWHERE
 } device_type;
 
 typedef enum{
@@ -32,7 +37,7 @@ typedef struct {
 	bool NumLock_is_pressed;
 } exit_shortcut;
 
-void prep_for_quit(int[]);
+//void //prep_for_quit(int ,struct libevdev_uinput[],struct libevdev_uinput[]);
 void process_input_event(struct input_event,struct event_result*);
 void clear_event_result(struct event_result*);
 void clear_shortcut_flags(exit_shortcut*);
@@ -43,14 +48,14 @@ bool requested_exit = false;//when true, mainloop will end
 
 int main(int argc,char *argv[]){
 	/*
-	int kbd_eventfile = open(KEYBOARD,O_RDONLY|O_NONBLOCK);
-	int kbd_eventfile_test = open("/dev/input/event3",O_RDONLY|O_NONBLOCK);
 	ioctl(kbd_eventfile,EVIOCGRAB,1);
 	*/
 
 	/*open and check device files*/
-	int *kbd_eventfiles;
-	int num_usable_kbd_evfl = argc-1;
+	int *kbd_eventfiles=NULL;
+	int *kbd_uinputfiles=NULL;
+	//int num_usable_kbd_evfl = argc-1;
+	int num_usable_kbd_evfl=0;
 	if(argc == 1){
 		fprintf(stderr,"error: no device file specified\n");
 		exit(EXIT_FAILURE);
@@ -59,16 +64,15 @@ int main(int argc,char *argv[]){
 			fprintf(stderr,"error: cannot malloc kbd_eventfiles\n");
 			exit(EXIT_FAILURE);
 		}
-		int counta_usable_fl=0;
 		int fd_tmp=-1;
 		for(int i=1;i<=(argc-1);i++){
 			fd_tmp=open(argv[i],O_RDONLY|O_NONBLOCK);
 			if(fd_tmp==-1){
-				num_usable_kbd_evfl-1;
 				continue;
 			}else{
-				kbd_eventfiles[counta_usable_fl]=fd_tmp;
-				counta_usable_fl++;
+				kbd_eventfiles[num_usable_kbd_evfl]=fd_tmp;
+				ioctl(fd_tmp,EVIOCGRAB,1);//exclucive block the file
+				num_usable_kbd_evfl++;
 			}
 		}
 		printf("%d\n",num_usable_kbd_evfl);
@@ -77,14 +81,72 @@ int main(int argc,char *argv[]){
 			exit(EXIT_FAILURE);
 		}
 	}
+	if((kbd_uinputfiles=(int*)malloc(sizeof(int)*num_usable_kbd_evfl))==NULL){
+		fprintf(stderr,"error: cannot malloc kbd_uinputfiles\n");
+		exit(EXIT_FAILURE);
+	}
+	struct libevdev **kbd_evdevs=NULL;
+	if((kbd_evdevs=(struct libevdev**)malloc(sizeof(struct libevdev*)*num_usable_kbd_evfl))==NULL){
+		fprintf(stderr,"error: cannot malloc kbd_evdevs\n");
+		exit(EXIT_FAILURE);
+	}
+	struct libevdev_uinput **kbd_uidevs=NULL;
+	if((kbd_uidevs=(struct libevdev_uinput**)malloc(sizeof(struct libevdev_uinput*)*num_usable_kbd_evfl))==NULL){
+		fprintf(stderr,"error: cannot malloc evdev\n");
+		exit(EXIT_FAILURE);
+	}
+	for(int k=0;k<num_usable_kbd_evfl;k++){
+		int uinput_fd_tmp=-1;
+		if((uinput_fd_tmp=open("/dev/uinput",O_WRONLY))==-1){
+			if((uinput_fd_tmp=open("/dev/input/uinput",O_WRONLY))==-1){//I didnt choose && because when first open was successful and second doesnt, second one will destroy the result of first one's
+				fprintf(stderr,"error: couldn't open either /dev/uinput nor /dev/input/uinput\n");
+				exit(EXIT_FAILURE);
+			}else{
+				kbd_uinputfiles[k]=uinput_fd_tmp;
+				if(libevdev_new_from_fd(kbd_eventfiles[k],&kbd_evdevs[k])!=0){
+					fprintf(stderr,"error: couldn't new kbd_evdevs\n");
+					exit(EXIT_FAILURE);
+				}
+				if(libevdev_uinput_create_from_device(kbd_evdevs[k],kbd_uinputfiles[k],&kbd_uidevs[k])!=0){
+					fprintf(stderr,"error: couldn't create kbd_uidevs\n");
+					exit(EXIT_FAILURE);
+				}
+			}
+		}else{
+			kbd_uinputfiles[k]=uinput_fd_tmp;
+			if(libevdev_new_from_fd(kbd_eventfiles[k],&kbd_evdevs[k])!=0){
+				fprintf(stderr,"error: couldn't new kbd_evdevs\n");
+				exit(EXIT_FAILURE);
+			}
+			if(libevdev_uinput_create_from_device(kbd_evdevs[k],kbd_uinputfiles[k],&kbd_uidevs[k])!=0){
+				fprintf(stderr,"error: couldn't create kbd_uidevs\n");
+				exit(EXIT_FAILURE);
+			}
+		}
+	}
+	
+	struct libevdev *mouse_evdev=libevdev_new();
+	struct libevdev_uinput *mouse_uidev=NULL;
+	libevdev_set_name(mouse_evdev,"keyboard mouse");
+	libevdev_enable_event_type(mouse_evdev,EV_REL);
+	libevdev_enable_event_code(mouse_evdev,EV_REL,REL_X,NULL);
+	libevdev_enable_event_code(mouse_evdev,EV_REL,REL_Y,NULL);
+	libevdev_enable_event_type(mouse_evdev,EV_KEY);
+	libevdev_enable_event_code(mouse_evdev,EV_KEY,BTN_LEFT,NULL);
+	libevdev_enable_event_code(mouse_evdev,EV_KEY,BTN_MIDDLE,NULL);
+	libevdev_enable_event_code(mouse_evdev,EV_KEY,BTN_RIGHT,NULL);
+	libevdev_uinput_create_from_device(mouse_evdev,LIBEVDEV_UINPUT_OPEN_MANAGED,&mouse_uidev);
+	
 	struct input_event *events;
 	if((events=(struct input_event*)malloc(sizeof(struct input_event)*num_usable_kbd_evfl))==NULL){
 		fprintf(stderr,"error: cannot malloc events\n");
+		//prep_for_quit(num_usable_kbd_evfl,kbd_uidevs,mouse_uidev);
 		exit(EXIT_FAILURE);
 	}
 	struct event_result *results;
 	if((results=(struct event_result*)malloc(sizeof(struct event_result)*num_usable_kbd_evfl))==NULL){
 		fprintf(stderr,"error: cannot malloc results\n");
+		//prep_for_quit(num_usable_kbd_evfl,kbd_uidevs,mouse_uidev);
 		exit(EXIT_FAILURE);
 	}
 	/*open and check device files end*/
@@ -92,24 +154,63 @@ int main(int argc,char *argv[]){
 	while(requested_exit == false){
 		for(int j=0;j<num_usable_kbd_evfl;j++){
 			if(read(kbd_eventfiles[j],&events[j],sizeof(struct input_event))<sizeof(struct input_event)){
-				prep_for_quit(kbd_eventfiles);
 				printf("error: cannot read from device\n");
+				//prep_for_quit(num_usable_kbd_evfl,kbd_uidevs,mouse_uidev);
 				exit(EXIT_FAILURE);
 			}
 			process_input_event(events[j],&results[j]);
-			/*if(results[j].distination==MOUSE_MOV){
-				requested_exit=true;
-			}*/
+			switch(results[j].distination){
+				case KEYBOARD:
+					for(int l=0;l<results[j].num_events;l++){
+						if(libevdev_uinput_write_event(kbd_uidevs[j],results[j].events[l].type,results[j].events[l].code,results[j].events[l].value)!=0){
+							fprintf(stderr,"error: failed to write event\n");
+							exit(EXIT_FAILURE);
+						}
+						if(libevdev_uinput_write_event(kbd_uidevs[j],EV_SYN,SYN_REPORT,0)!=0){
+							fprintf(stderr,"error: failed to write event\n");
+							exit(EXIT_FAILURE);
+						}
+						usleep(10*micro_sec);
+					}
+					break;
+				case MOUSE_BTN:
+					for(int l=0;l<results[j].num_events;l++){
+						if(libevdev_uinput_write_event(mouse_uidev,results[j].events[l].type,results[j].events[l].code,results[j].events[l].value)!=0){
+							fprintf(stderr,"error: failed to write event\n");
+							exit(EXIT_FAILURE);
+						}
+						if(libevdev_uinput_write_event(mouse_uidev,EV_SYN,SYN_REPORT,0)!=0){
+							fprintf(stderr,"error: failed to write event\n");
+							exit(EXIT_FAILURE);
+						}
+						usleep(10*micro_sec);
+					}
+					break;
+				case MOUSE_MOV:
+					for(int l=0;l<results[j].num_events;l++){
+						if(libevdev_uinput_write_event(mouse_uidev,results[j].events[l].type,results[j].events[l].code,results[j].events[l].value)!=0){
+							fprintf(stderr,"error: failed to write event\n");
+							exit(EXIT_FAILURE);
+						}
+						if(libevdev_uinput_write_event(mouse_uidev,EV_SYN,SYN_REPORT,0)!=0){
+							fprintf(stderr,"error: failed to write event\n");
+							exit(EXIT_FAILURE);
+						}
+						usleep(10*micro_sec);
+					}
+					break;
+			}
 		}
 	}
 	/*meinloop end*/
 
 	//ioctl(kbd_eventfile,EVIOCGRAB,0);
 	printf("exit\n");
+	//prep_for_quit(num_usable_kbd_evfl,kbd_uidevs,mouse_uidev);
 	return 0;
 }
-#define VALUE_MOUSE_MOVE_X 1
-#define VALUE_MOUSE_MOVE_Y 1
+#define VALUE_MOUSE_MOVE_X 5
+#define VALUE_MOUSE_MOVE_Y -5
 
 void process_input_event(struct input_event event_to_process,struct event_result *result){
 	static mouse_btn_type selected_btn = LEFT;
@@ -120,7 +221,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 			case KEY_KP0:
 				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value == 1){
-					printf(" KEY_KP0\n");
+//					printf(" KEY_KP0\n");
 					result->distination = MOUSE_BTN;
 					result->num_events = 1;
 					set_input_event(&(result->events[0]),EV_KEY,BTN_LEFT,1);
@@ -129,7 +230,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 			case KEY_KP1:
 				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
-					printf(" KEY_KP1\n");
+//					printf(" KEY_KP1\n");
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
 					set_input_event(&(result->events[0]),EV_REL,REL_X,-VALUE_MOUSE_MOVE_X);
@@ -139,7 +240,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 			case KEY_KP2:
 				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
-					printf(" KEY_KP2\n");
+//					printf(" KEY_KP2\n");
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
 					set_input_event(&(result->events[0]),EV_REL,REL_X,0);
@@ -149,7 +250,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 			case KEY_KP3:
 				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
-					printf(" KEY_KP3\n");
+//					printf(" KEY_KP3\n");
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
 					set_input_event(&(result->events[0]),EV_REL,REL_X,VALUE_MOUSE_MOVE_X);
@@ -159,7 +260,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 			case KEY_KP4:
 				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
-					printf(" KEY_KP4\n");
+//					printf(" KEY_KP4\n");
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
 					set_input_event(&(result->events[0]),EV_REL,REL_X,-VALUE_MOUSE_MOVE_X);
@@ -169,7 +270,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 			case KEY_KP5:
 				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value == 1){
-					printf(" KEY_KP5\n");
+//					printf(" KEY_KP5\n");
 					result->distination = MOUSE_BTN;
 					result->num_events = 2;
 					set_input_event(&(result->events[0]),EV_KEY,selected_btn,1);
@@ -179,7 +280,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 			case KEY_KP6:
 				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
-					printf(" KEY_KP6\n");
+//					printf(" KEY_KP6\n");
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
 					set_input_event(&(result->events[0]),EV_REL,REL_X,VALUE_MOUSE_MOVE_X);
@@ -189,7 +290,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 			case KEY_KP7:
 				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
-					printf(" KEY_KP7\n");
+//					printf(" KEY_KP7\n");
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
 					set_input_event(&(result->events[0]),EV_REL,REL_X,-VALUE_MOUSE_MOVE_X);
@@ -199,7 +300,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 			case KEY_KP8:
 				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
-					printf(" KEY_KP8\n");
+//					printf(" KEY_KP8\n");
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
 					set_input_event(&(result->events[0]),EV_REL,REL_X,0);
@@ -209,7 +310,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 			case KEY_KP9:
 				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value != 0){
-					printf(" KEY_KP9\n");
+//					printf(" KEY_KP9\n");
 					result->distination = MOUSE_MOV;
 					result->num_events = 2;
 					set_input_event(&(result->events[0]),EV_REL,REL_X,VALUE_MOUSE_MOVE_X);
@@ -219,7 +320,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 			case KEY_KPDOT:
 				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value == 1){
-					printf(" KEY_KPDOT\n");
+//					printf(" KEY_KPDOT\n");
 					result->distination = MOUSE_BTN;
 					result->num_events = 1;
 					set_input_event(&(result->events[0]),EV_KEY,BTN_LEFT,0);
@@ -228,7 +329,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 			case KEY_KPSLASH:
 				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value == 1){
-					printf(" KEY_KPSLASH\n");
+//					printf(" KEY_KPSLASH\n");
 					result->num_events = 0;
 					selected_btn = LEFT;
 				}
@@ -236,7 +337,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 			case KEY_KPASTERISK:
 				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value == 1){
-					printf(" KEY_KPASTERISK\n");
+//					printf(" KEY_KPASTERISK\n");
 					result->num_events = 0;
 					selected_btn = MIDDLE;
 				}
@@ -244,7 +345,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 			case KEY_KPMINUS:
 				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value == 1){
-					printf(" KEY_KPMINUS\n");
+//					printf(" KEY_KPMINUS\n");
 					result->num_events = 0;
 					selected_btn = RIGHT;
 				}
@@ -252,7 +353,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 			case KEY_KPPLUS:
 				clear_shortcut_flags(&flags_pressed);
 				if(event_to_process.value == 1){
-					printf(" KEY_KPPLUS\n");
+//					printf(" KEY_KPPLUS\n");
 					result->distination = MOUSE_BTN;
 					result->num_events = 4;
 					set_input_event(&(result->events[0]),EV_KEY,selected_btn,1);
@@ -314,7 +415,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				break;
 			default:
 				clear_shortcut_flags(&flags_pressed);
-				printf(" else\n");
+//				printf(" else\n");
 				result->distination = KEYBOARD;
 				result->num_events = 1;
 				result->events[0] = event_to_process;
@@ -331,7 +432,7 @@ void set_input_event(struct input_event *to_set,int type,int code,int value){
 
 const struct input_event input_event_NULL={.type=0,.code=0,.value=0};
 inline void clear_event_result(struct event_result *to_clear){
-	to_clear->distination = NONE;
+	to_clear->distination = NOWHERE;
 	to_clear->num_events = 0;
 	for(int i=0;i<4;i++){
 		to_clear->events[i] = input_event_NULL;
@@ -344,17 +445,18 @@ inline void clear_shortcut_flags(exit_shortcut *to_clear){
 	to_clear->NumLock_is_pressed = false;
 }
 
-void prep_for_quit(int fds_to_close[]){
+/*
+inline void prep_for_quit(int num_uidev_to_destroy,struct libevdev_uinput kbd_uidev_to_destroy[],struct libevdev_uinput mouse_uidev_to_destroy[]){
 	//destroy uinput
-	//close uinput
-	//unlock input device files
-	//close input device files
-	//
-	;
+	for(int i=0;i<num_uidev_to_destroy;i++){
+		libevdev_uinput_destroy(kbd_uidev_to_destroy[i]);
+	}
+	libevdev_uinput_destroy(mouse_uidev_to_destroy);
 }
+*/
 
 /*
 void signal_handler(void){#set flag
-	;
+	requested_exit = true;
 }
  */
