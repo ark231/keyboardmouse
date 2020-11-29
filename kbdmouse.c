@@ -57,8 +57,8 @@ bool requested_exit = false;//when true, mainloop will end
 int main(int argc,char *argv[]){
 	/*process args*/
 	struct option longopts[]={
-		{"mov_X",required_argument,0,'X'},
-		{"mov_Y",required_argument,0,'Y'},
+		{"X_mov",required_argument,0,'X'},
+		{"Y_mov",required_argument,0,'Y'},
 		{      0,                0,0, 0 },
 	};
 	int idx_lngopt=0;
