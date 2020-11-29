@@ -7,8 +7,14 @@ if [ "$(ps -a|grep "kbdmouse")" = "" ]; then
 		exit 1
 	else
 		#有効化処理
-		pkexec $DIR_SCRIPT/kbdmouse $($DIR_SCRIPT/search_device.sh)
-		:
+		mkfifo $DIR_SCRIPT/kbdmouse_err_msg
+		pkexec $DIR_SCRIPT/kbdmouse $($DIR_SCRIPT/search_device.sh) 2>$DIR_SCRIPT/kbdmouse_err_msg&
+		#$DIR_SCRIPT/kbdmouse $($DIR_SCRIPT/search_device.sh) 2>$DIR_SCRIPT/kbdmouse_err_msg& # this must fail
+		KBD_MOUSE_ERR_MSG=$(env DIR_SCRIPT=$DIR_SCRIPT cat $DIR_SCRIPT/kbdmouse_err_msg)
+		if [ "$KBD_MOUSE_ERR_MSG" != "" ];then
+			notify-send -u critical -a kbdmouse -c ERROR "error message" "$KBD_MOUSE_ERR_MSG"
+		fi
+		rm $DIR_SCRIPT/kbdmouse_err_msg
 	fi
 else
 	zenity --question --text="キーボードマウスを無効化しますか？" --ok-label="はい" --cancel-label="いいえ" --width 250
