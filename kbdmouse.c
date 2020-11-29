@@ -269,6 +269,7 @@ int main(int argc,char *argv[]){
 void process_input_event(struct input_event event_to_process,struct event_result *result,X_Y_vector *val_mouse_mov){
 	static mouse_btn_type selected_btn = LEFT;
 	static exit_shortcut flags_pressed = {.Shift_is_pressed = false,.Alt_is_pressed = false,.NumLock_is_pressed = false};//in this method, user can quit by pressing three keys on different keyboards, but I dont care because it wont be so much probrem
+	static bool escape_activated = false;
 	clear_event_result(result);
 	if(event_to_process.type==EV_KEY){
 		switch(event_to_process.code){
@@ -382,38 +383,54 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				break;
 			case KEY_KPSLASH:
 				clear_shortcut_flags(&flags_pressed);
-				if(event_to_process.value == 1){
-					//printf(" KEY_KPSLASH\n");
-					result->num_events = 0;
-					selected_btn = LEFT;
+				if(escape_activated){
+					val_mouse_mov->X--;
+				}else{
+					if(event_to_process.value == 1){
+						//printf(" KEY_KPSLASH\n");
+						//result->num_events = 0;
+						selected_btn = LEFT;
+					}
 				}
 				break;
 			case KEY_KPASTERISK:
 				clear_shortcut_flags(&flags_pressed);
-				if(event_to_process.value == 1){
-					//printf(" KEY_KPASTERISK\n");
-					result->num_events = 0;
-					selected_btn = MIDDLE;
+				if(escape_activated){
+					val_mouse_mov->X++;
+				}else{
+					if(event_to_process.value == 1){
+						//printf(" KEY_KPASTERISK\n");
+						//result->num_events = 0;
+						selected_btn = MIDDLE;
+					}
 				}
 				break;
 			case KEY_KPMINUS:
 				clear_shortcut_flags(&flags_pressed);
-				if(event_to_process.value == 1){
-					//printf(" KEY_KPMINUS\n");
-					result->num_events = 0;
-					selected_btn = RIGHT;
+				if(escape_activated){
+					val_mouse_mov->Y--;
+				}else{
+					if(event_to_process.value == 1){
+						//printf(" KEY_KPMINUS\n");
+						//result->num_events = 0;
+						selected_btn = RIGHT;
+					}
 				}
 				break;
 			case KEY_KPPLUS:
 				clear_shortcut_flags(&flags_pressed);
-				if(event_to_process.value == 1){
-					//printf(" KEY_KPPLUS\n");
-					result->distination = MOUSE_BTN;
-					result->num_events = 4;
-					set_input_event(&(result->events[0]),EV_KEY,selected_btn,1);
-					set_input_event(&(result->events[1]),EV_KEY,selected_btn,0);
-					set_input_event(&(result->events[2]),EV_KEY,selected_btn,1);
-					set_input_event(&(result->events[3]),EV_KEY,selected_btn,0);
+				if(escape_activated){
+					val_mouse_mov->Y++;
+				}else{
+					if(event_to_process.value == 1){
+						//printf(" KEY_KPPLUS\n");
+						result->distination = MOUSE_BTN;
+						result->num_events = 4;
+						set_input_event(&(result->events[0]),EV_KEY,selected_btn,1);
+						set_input_event(&(result->events[1]),EV_KEY,selected_btn,0);
+						set_input_event(&(result->events[2]),EV_KEY,selected_btn,1);
+						set_input_event(&(result->events[3]),EV_KEY,selected_btn,0);
+					}
 				}
 				break;
 			case KEY_LEFTSHIFT:
@@ -456,16 +473,26 @@ void process_input_event(struct input_event event_to_process,struct event_result
 						requested_exit = true;
 					}else{
 						flags_pressed.NumLock_is_pressed= true;
+						escape_activated = true;
+						/* NumLock key is not neccesary
 						result->distination = KEYBOARD;
 						result->num_events = 1;
 						result->events[0] = event_to_process;
+						*/
 					}
 				}else{
 					clear_shortcut_flags(&flags_pressed);
+					escape_activated = false;
+					/*
 					result->distination = KEYBOARD;
 					result->num_events = 1;
 					result->events[0] = event_to_process;
+					*/
 				}
+				break;
+			case KEY_KPENTER:
+				//lets disable whole tenkey!
+				clear_shortcut_flags(&flags_pressed);
 				break;
 			default:
 				clear_shortcut_flags(&flags_pressed);
