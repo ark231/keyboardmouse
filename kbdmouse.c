@@ -176,6 +176,10 @@ int main(int argc,char *argv[]){
 	libevdev_enable_event_type(mouse_evdev,EV_REL);
 	libevdev_enable_event_code(mouse_evdev,EV_REL,REL_X,NULL);
 	libevdev_enable_event_code(mouse_evdev,EV_REL,REL_Y,NULL);
+	libevdev_enable_event_code(mouse_evdev,EV_REL,REL_WHEEL,NULL);
+	libevdev_enable_event_code(mouse_evdev,EV_REL,REL_WHEEL_HI_RES,NULL);
+	libevdev_enable_event_code(mouse_evdev,EV_REL,REL_HWHEEL,NULL);
+	libevdev_enable_event_code(mouse_evdev,EV_REL,REL_HWHEEL_HI_RES,NULL);
 	libevdev_enable_event_type(mouse_evdev,EV_KEY);
 	libevdev_enable_event_code(mouse_evdev,EV_KEY,BTN_LEFT,NULL);
 	libevdev_enable_event_code(mouse_evdev,EV_KEY,BTN_MIDDLE,NULL);
@@ -240,15 +244,39 @@ int main(int argc,char *argv[]){
 						}
 						break;
 					case MOUSE_MOV:
+#ifdef DEBUG
+						printf("send mouse move for %d times\n",results[j].num_events);
+#endif
 						for(int l=0;l<results[j].num_events;l++){
+#ifdef DEBUG
+							printf("%dst send out of %d\n",l,results[j].num_events);
+#endif
 							if(libevdev_uinput_write_event(mouse_uidev,results[j].events[l].type,results[j].events[l].code,results[j].events[l].value)!=0){
 								fprintf(stderr,"error: failed to write event\n");
 								exit(EXIT_FAILURE);
 							}
+#ifdef DEBUG
+							printf("fin send data\n");
+#endif 
+							if(l%2 == 1){
+								if(libevdev_uinput_write_event(mouse_uidev,EV_SYN,SYN_REPORT,0)!=0){
+									fprintf(stderr,"error: failed to write event\n");
+									exit(EXIT_FAILURE);
+								}
+#ifdef DEBUG
+								printf("fin send sync\n");
+#endif
+								usleep(20*micro_sec);
+							}
+						}
+						if(results[j].num_events%2 == 1){//奇数回だと、最後のSYNCが送られないので、ここで判別
 							if(libevdev_uinput_write_event(mouse_uidev,EV_SYN,SYN_REPORT,0)!=0){
 								fprintf(stderr,"error: failed to write event\n");
 								exit(EXIT_FAILURE);
 							}
+#ifdef DEBUG
+							printf("fin send sync\n");
+#endif
 							usleep(20*micro_sec);
 						}
 						break;
@@ -294,12 +322,19 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				break;
 			case KEY_KP2:
 				clear_shortcut_flags(&flags_pressed);
-				if(event_to_process.value != 0){
-					//printf(" KEY_KP2\n");
+				if(escape_activated && event_to_process.value != 0){
 					result->distination = MOUSE_MOV;
-					result->num_events = 2;
-					set_input_event(&(result->events[0]),EV_REL,REL_X,0);
-					set_input_event(&(result->events[1]),EV_REL,REL_Y,val_mouse_mov->Y);
+					result->num_events = 1;
+					set_input_event(&(result->events[0]),EV_REL,REL_WHEEL,-1);
+					//set_input_event(&(result->events[0]),EV_REL,REL_WHEEL_HI_RES,-120);
+				}else{
+					if(event_to_process.value != 0){
+						//printf(" KEY_KP2\n");
+						result->distination = MOUSE_MOV;
+						result->num_events = 2;
+						set_input_event(&(result->events[0]),EV_REL,REL_X,0);
+						set_input_event(&(result->events[1]),EV_REL,REL_Y,val_mouse_mov->Y);
+					}
 				}
 				break;
 			case KEY_KP3:
@@ -314,12 +349,18 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				break;
 			case KEY_KP4:
 				clear_shortcut_flags(&flags_pressed);
-				if(event_to_process.value != 0){
-					//printf(" KEY_KP4\n");
+				if(escape_activated && event_to_process.value != 0){
 					result->distination = MOUSE_MOV;
-					result->num_events = 2;
-					set_input_event(&(result->events[0]),EV_REL,REL_X,-val_mouse_mov->X);
-					set_input_event(&(result->events[1]),EV_REL,REL_Y,0);
+					result->num_events = 1;
+					set_input_event(&(result->events[0]),EV_REL,REL_HWHEEL,-1);
+				}else{
+					if(event_to_process.value != 0){
+						//printf(" KEY_KP4\n");
+						result->distination = MOUSE_MOV;
+						result->num_events = 2;
+						set_input_event(&(result->events[0]),EV_REL,REL_X,-val_mouse_mov->X);
+						set_input_event(&(result->events[1]),EV_REL,REL_Y,0);
+					}
 				}
 				break;
 			case KEY_KP5:
@@ -334,12 +375,18 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				break;
 			case KEY_KP6:
 				clear_shortcut_flags(&flags_pressed);
-				if(event_to_process.value != 0){
-					//printf(" KEY_KP6\n");
+				if(escape_activated && event_to_process.value != 0){
 					result->distination = MOUSE_MOV;
-					result->num_events = 2;
-					set_input_event(&(result->events[0]),EV_REL,REL_X,val_mouse_mov->X);
-					set_input_event(&(result->events[1]),EV_REL,REL_Y,0);
+					result->num_events = 1;
+					set_input_event(&(result->events[0]),EV_REL,REL_HWHEEL,1);
+				}else{
+					if(event_to_process.value != 0){
+						//printf(" KEY_KP6\n");
+						result->distination = MOUSE_MOV;
+						result->num_events = 2;
+						set_input_event(&(result->events[0]),EV_REL,REL_X,val_mouse_mov->X);
+						set_input_event(&(result->events[1]),EV_REL,REL_Y,0);
+					}
 				}
 				break;
 			case KEY_KP7:
@@ -354,12 +401,19 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				break;
 			case KEY_KP8:
 				clear_shortcut_flags(&flags_pressed);
-				if(event_to_process.value != 0){
-					//printf(" KEY_KP8\n");
+				//printf("KP8\n");
+				if(escape_activated && event_to_process.value != 0){
 					result->distination = MOUSE_MOV;
-					result->num_events = 2;
-					set_input_event(&(result->events[0]),EV_REL,REL_X,0);
-					set_input_event(&(result->events[1]),EV_REL,REL_Y,-val_mouse_mov->Y);
+					result->num_events = 1;
+					set_input_event(&(result->events[0]),EV_REL,REL_WHEEL,1);
+					//set_input_event(&(result->events[1]),EV_REL,REL_WHEEL_HI_RES,120);
+				}else{
+					if(event_to_process.value != 0){
+						result->distination = MOUSE_MOV;
+						result->num_events = 2;
+						set_input_event(&(result->events[0]),EV_REL,REL_X,0);
+						set_input_event(&(result->events[1]),EV_REL,REL_Y,-val_mouse_mov->Y);
+					}
 				}
 				break;
 			case KEY_KP9:
