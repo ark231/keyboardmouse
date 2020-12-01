@@ -383,8 +383,9 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				break;
 			case KEY_KPSLASH:
 				clear_shortcut_flags(&flags_pressed);
-				if(escape_activated){
+				if(escape_activated && event_to_process.value !=0){
 					val_mouse_mov->X--;
+					printf("X move speed: %d\n",val_mouse_mov->X);
 				}else{
 					if(event_to_process.value == 1){
 						//printf(" KEY_KPSLASH\n");
@@ -395,8 +396,9 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				break;
 			case KEY_KPASTERISK:
 				clear_shortcut_flags(&flags_pressed);
-				if(escape_activated){
+				if(escape_activated && event_to_process.value !=0){
 					val_mouse_mov->X++;
+					printf("X move speed: %d\n",val_mouse_mov->X);
 				}else{
 					if(event_to_process.value == 1){
 						//printf(" KEY_KPASTERISK\n");
@@ -407,8 +409,9 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				break;
 			case KEY_KPMINUS:
 				clear_shortcut_flags(&flags_pressed);
-				if(escape_activated){
+				if(escape_activated && event_to_process.value !=0){
 					val_mouse_mov->Y--;
+					printf("Y move speed: %d\n",val_mouse_mov->Y);
 				}else{
 					if(event_to_process.value == 1){
 						//printf(" KEY_KPMINUS\n");
@@ -419,8 +422,9 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				break;
 			case KEY_KPPLUS:
 				clear_shortcut_flags(&flags_pressed);
-				if(escape_activated){
+				if(escape_activated && event_to_process.value !=0){
 					val_mouse_mov->Y++;
+					printf("Y move speed: %d\n",val_mouse_mov->Y);
 				}else{
 					if(event_to_process.value == 1){
 						//printf(" KEY_KPPLUS\n");
