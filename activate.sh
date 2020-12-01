@@ -32,11 +32,6 @@ if [ "$(ps -a|grep "kbdmouse")" = "" ]; then
 		rm $DIR_SCRIPT/kbdmouse_err_msg
 	fi
 else
-	zenity --question --text="キーボードマウスを無効化しますか？" --ok-label="はい" --cancel-label="いいえ" --width 250
-	if [ $? != 0 ]; then
-		exit 2
-	else
-		#無効化処理
-		:
-	fi
+	zenity --error --text="すでにキーボードマウスが有効になっています。" --width 300
+	exit 2
 fi
