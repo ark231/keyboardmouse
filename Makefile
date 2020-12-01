@@ -8,4 +8,4 @@ build:
 
 debug:
 	rm -f $(RESULTDIR)/kbdmouse_debug
-	$(GCC) -g3 -o $(RESULTDIR)/kbdmouse_debug kbdmouse.c $(INCLUDEDIRS) $(LIBS)
+	$(GCC) -g3 -o $(RESULTDIR)/kbdmouse_debug kbdmouse.c -DDEBUG $(INCLUDEDIRS) $(LIBS)
