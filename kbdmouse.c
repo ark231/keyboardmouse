@@ -456,11 +456,32 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				break;
 			case KEY_KPDOT:
 				clear_shortcut_flags(&flags_pressed);
-				if(event_to_process.value == 1){
-					//PRINTF(" KEY_KPDOT\n");
-					result->distination = MOUSE_BTN;
-					result->num_events = 1;
-					set_input_event(&(result->events[0]),EV_KEY,BTN_LEFT,0);
+				if(NumLock_escape_activated && event_to_process.value == 1){
+					PRINTF("<status>\n");
+					PRINTF("X move speed: %d\n",val_mouse_mov->X);
+					PRINTF("Y move speed: %d\n",val_mouse_mov->Y);
+					PRINTF("Y move speed: %d\n",val_mouse_mov->Y);
+					switch(selected_btn){
+						case BTN_LEFT:
+							PRINTF("mouse: LEFT\n");
+							break;
+						case BTN_MIDDLE:
+							PRINTF("mouse: MIDDLE\n");
+							break;
+						case BTN_RIGHT:
+							PRINTF("mouse: RIGHT\n");
+							break;
+						default:
+							break;
+					}
+					PRINTF("<\\status>\n");
+				}else{
+					if(event_to_process.value == 1){
+						//PRINTF(" KEY_KPDOT\n");
+						result->distination = MOUSE_BTN;
+						result->num_events = 1;
+						set_input_event(&(result->events[0]),EV_KEY,BTN_LEFT,0);
+					}
 				}
 				break;
 			case KEY_KPSLASH:
@@ -474,6 +495,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 						//PRINTF(" KEY_KPSLASH\n");
 						//result->num_events = 0;
 						selected_btn = LEFT;
+						PRINTF("mouse: LEFT\n");
 					}
 				}
 				break;
@@ -487,6 +509,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 						//PRINTF(" KEY_KPASTERISK\n");
 						//result->num_events = 0;
 						selected_btn = MIDDLE;
+						PRINTF("mouse: MIDDLE\n");
 					}
 				}
 				break;
@@ -500,6 +523,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 						//PRINTF(" KEY_KPMINUS\n");
 						//result->num_events = 0;
 						selected_btn = RIGHT;
+						PRINTF("mouse: RIGHT\n");
 					}
 				}
 				break;
