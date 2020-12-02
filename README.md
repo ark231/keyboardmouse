@@ -8,6 +8,20 @@ $ cd /path/to/this/repo
 $ make build
 ```
 
+その後、どこかパスの通っているところで
+```
+|
+|--kbdmouse
+|--search_device.sh
+|--activate.sh
+|--notification.sh
+|--pictures
+   |--mouse_LEFT.png
+   |--mouse_MIDDLE.png
+   |--mouse_RIGHT.png
+```
+
+このようなディレクトリ構成にする。
 ### 起動
 ```
 $ /path/to/file/activate.sh
@@ -43,6 +57,8 @@ Ctrlで加速、とかには対応して***いません***
 ---|:---
 |X_MOV|マウスカーソルのX方向の移動速度の初期値。何も設定しないと5|
 |Y_MOV|マウスカーソルのY方向の移動速度の初期値。何も設定しないと5|
+|CONFIRM|[true/false] 起動時に確認するか。何も設定しないと確認される|
+|NOTIFICATION|[zero/error/full] メッセージを通知するか。何も設定しないとすべて通知される|
 
 ## 備考
 

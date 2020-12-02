@@ -10,43 +10,53 @@ notify_msg(){
 
 DIR_SCRIPT=$(cd $(dirname $0);pwd)
 if [ "$(ps -a|grep "kbdmouse")" = "" ]; then
-	zenity --question --text="キーボードマウスを有効化しますか？\n（テンキーが必要です）" --ok-label="はい" --cancel-label="いいえ" --width 250
-	if [ $? != 0 ]; then
-		exit 1
-	else
-		#有効化処理
-		get_val_from_configfl "X_mov_from_conf" "X_MOV"
-		get_val_from_configfl "Y_mov_from_conf" "Y_MOV"
-		if [ "a$X_mov_from_conf" != "a" ];then
-			X_mov_arg="--X_mov $X_mov_from_conf"
-		else
-			X_mov_arg=""
+	get_val_from_configfl "confirm_before_start" "CONFIRM"
+	if [ "a$confirm_before_start" = "a" ] || [ "a$confirm_before_start" = "atrue" ];then
+		zenity --question --text="キーボードマウスを有効化しますか？\n（テンキーが必要です）" --ok-label="はい" --cancel-label="いいえ" --width 250
+		if [ $? != 0 ]; then
+			exit 1
 		fi
-		if [ "a$Y_mov_from_conf" != "a" ];then
-			Y_mov_arg="--Y_mov $Y_mov_from_conf"
-		else
-			Y_mov_arg=""
-		fi
-		ERR_MSG_FIFO_NAME=$(mktemp -u kbdmouse_err_msg_XXX)
-		NORMAL_MSG_FIFO_NAME=$(mktemp -u kbdmouse_normal_msg_XXX)
-		mkfifo $DIR_SCRIPT/$ERR_MSG_FIFO_NAME
-		mkfifo $DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME
-
-		notify_msg "normal" "$DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME"&
-		notify_msg "error" "$DIR_SCRIPT/$ERR_MSG_FIFO_NAME"&
-		pkexec bash -c "$DIR_SCRIPT/kbdmouse $($DIR_SCRIPT/search_device.sh) $X_mov_arg $Y_mov_arg 1>$DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME 2>$DIR_SCRIPT/$ERR_MSG_FIFO_NAME"
-
-		#pkexec $DIR_SCRIPT/kbdmouse $($DIR_SCRIPT/search_device.sh) 1>$DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME 2>$DIR_SCRIPT/$ERR_MSG_FIFO_NAME $X_mov_arg $Y_mov_arg &
-		#pkexec $DIR_SCRIPT/call_kbdmouse.sh $DIR_SCRIPT $NORMAL_MSG_FIFO_NAME $ERR_MSG_FIFO_NAME $X_mov_arg $Y_mov_arg &
-
-
-		#KBD_MOUSE_ERR_MSG=$(env DIR_SCRIPT=$DIR_SCRIPT cat $DIR_SCRIPT/kbdmouse_err_msg)
-		#if [ "$KBD_MOUSE_ERR_MSG" != "" ];then
-		#	notify-send -u critical -a kbdmouse -c ERROR "error message" "$KBD_MOUSE_ERR_MSG"
-		#fi
-		rm $DIR_SCRIPT/$ERR_MSG_FIFO_NAME
-		rm $DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME
 	fi
+	#有効化処理
+	get_val_from_configfl "X_mov_from_conf" "X_MOV"
+	get_val_from_configfl "Y_mov_from_conf" "Y_MOV"
+	get_val_from_configfl "notification" "NOTIFICATION"
+	if [ "a$X_mov_from_conf" != "a" ];then
+		X_mov_arg="--X_mov $X_mov_from_conf"
+	else
+		X_mov_arg=""
+	fi
+	if [ "a$Y_mov_from_conf" != "a" ];then
+		Y_mov_arg="--Y_mov $Y_mov_from_conf"
+	else
+		Y_mov_arg=""
+	fi
+	ERR_MSG_FIFO_NAME=$(mktemp -u kbdmouse_err_msg_XXX)
+	NORMAL_MSG_FIFO_NAME=$(mktemp -u kbdmouse_normal_msg_XXX)
+	mkfifo $DIR_SCRIPT/$ERR_MSG_FIFO_NAME
+	mkfifo $DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME
+	if [ "a$notification" = "a" ] || [ "a$notification" = "afull" ];then
+		notify_msg "normal" "$DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME"&
+	else
+		cat "$DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME">/dev/null &
+	fi
+	if [ "a$notification" = "a" ] || [ "a$notification" = "aerror" ] || [ "a$notification" = "afull" ];then
+		notify_msg "error" "$DIR_SCRIPT/$ERR_MSG_FIFO_NAME"&
+	else
+		cat "$DIR_SCRIPT/$ERR_MSG_FIFO_NAME">/dev/null &
+	fi
+	pkexec bash -c "$DIR_SCRIPT/kbdmouse $($DIR_SCRIPT/search_device.sh) $X_mov_arg $Y_mov_arg 1>$DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME 2>$DIR_SCRIPT/$ERR_MSG_FIFO_NAME"
+
+	#pkexec $DIR_SCRIPT/kbdmouse $($DIR_SCRIPT/search_device.sh) 1>$DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME 2>$DIR_SCRIPT/$ERR_MSG_FIFO_NAME $X_mov_arg $Y_mov_arg &
+	#pkexec $DIR_SCRIPT/call_kbdmouse.sh $DIR_SCRIPT $NORMAL_MSG_FIFO_NAME $ERR_MSG_FIFO_NAME $X_mov_arg $Y_mov_arg &
+
+
+	#KBD_MOUSE_ERR_MSG=$(env DIR_SCRIPT=$DIR_SCRIPT cat $DIR_SCRIPT/kbdmouse_err_msg)
+	#if [ "$KBD_MOUSE_ERR_MSG" != "" ];then
+	#	notify-send -u critical -a kbdmouse -c ERROR "error message" "$KBD_MOUSE_ERR_MSG"
+	#fi
+	rm $DIR_SCRIPT/$ERR_MSG_FIFO_NAME
+	rm $DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME
 else
 	zenity --error --text="すでにキーボードマウスが有効になっています。" --width 300
 	exit 2
