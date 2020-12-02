@@ -15,7 +15,7 @@ notify_msg(){
 		"normal")
 			cat $2|while read line
 			do
-					notify-send -u normal -a kbdmouse -c MESSAGE "message" "$line"
+					notify-send -u normal -a kbdmouse -c MESSAGE -t 500 "message" "$line"
 			done
 			;;
 	esac
@@ -45,13 +45,13 @@ if [ "$(ps -a|grep "kbdmouse")" = "" ]; then
 		mkfifo $DIR_SCRIPT/$ERR_MSG_FIFO_NAME
 		mkfifo $DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME
 
-		pkexec $DIR_SCRIPT/kbdmouse $($DIR_SCRIPT/search_device.sh) $X_mov_arg $Y_mov_arg &
+		notify_msg "normal" "$DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME"&
+		notify_msg "error" "$DIR_SCRIPT/$ERR_MSG_FIFO_NAME"&
+		pkexec bash -c "$DIR_SCRIPT/kbdmouse $($DIR_SCRIPT/search_device.sh) $X_mov_arg $Y_mov_arg 1>$DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME 2>$DIR_SCRIPT/$ERR_MSG_FIFO_NAME"
 
 		#pkexec $DIR_SCRIPT/kbdmouse $($DIR_SCRIPT/search_device.sh) 1>$DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME 2>$DIR_SCRIPT/$ERR_MSG_FIFO_NAME $X_mov_arg $Y_mov_arg &
 		#pkexec $DIR_SCRIPT/call_kbdmouse.sh $DIR_SCRIPT $NORMAL_MSG_FIFO_NAME $ERR_MSG_FIFO_NAME $X_mov_arg $Y_mov_arg &
 
-		#notify_msg "normal" "$DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME"&
-		#notify_msg "error" "$DIR_SCRIPT/$ERR_MSG_FIFO_NAME"&
 
 		#KBD_MOUSE_ERR_MSG=$(env DIR_SCRIPT=$DIR_SCRIPT cat $DIR_SCRIPT/kbdmouse_err_msg)
 		#if [ "$KBD_MOUSE_ERR_MSG" != "" ];then
