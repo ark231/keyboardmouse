@@ -460,7 +460,6 @@ void process_input_event(struct input_event event_to_process,struct event_result
 					PRINTF("<status>\n");
 					PRINTF("X move speed: %d\n",val_mouse_mov->X);
 					PRINTF("Y move speed: %d\n",val_mouse_mov->Y);
-					PRINTF("Y move speed: %d\n",val_mouse_mov->Y);
 					switch(selected_btn){
 						case BTN_LEFT:
 							PRINTF("mouse: LEFT\n");
@@ -474,7 +473,7 @@ void process_input_event(struct input_event event_to_process,struct event_result
 						default:
 							break;
 					}
-					PRINTF("<\\status>\n");
+					PRINTF("</status>\n");
 				}else{
 					if(event_to_process.value == 1){
 						//PRINTF(" KEY_KPDOT\n");
