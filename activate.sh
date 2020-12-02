@@ -5,20 +5,7 @@ get_val_from_configfl(){
 }
 
 notify_msg(){
-	case $1 in
-		"error")
-			cat $2|while read line
-			do
-					notify-send -u critical -a kbdmouse -c ERROR "error message" "$line"
-			done
-			;;
-		"normal")
-			cat $2|while read line
-			do
-					notify-send -u normal -a kbdmouse -c MESSAGE -t 500 "message" "$line"
-			done
-			;;
-	esac
+	$DIR_SCRIPT/notification.sh $1 $2
 }
 
 DIR_SCRIPT=$(cd $(dirname $0);pwd)
