@@ -73,6 +73,7 @@ int main(int argc,char *argv[]){
 				int X_mov_tmp=(int)strtol(optarg,&err,0);
 				if(*err != '\n' && *err != '\0'){
 					printf("error: invalid value %s\n",optarg);
+					fflush(stdout);
 				}else{
 					value_mouse_move.X=X_mov_tmp;
 				}
@@ -84,13 +85,14 @@ int main(int argc,char *argv[]){
 				int Y_mov_tmp=(int)strtol(optarg,&err,0);
 				if(*err != '\n' && *err != '\0'){
 					printf("error: invalid value %s\n",optarg);
+					fflush(stdout);
 				}else{
 					value_mouse_move.Y=Y_mov_tmp;
 				}
 				break;
 				}
 			case '?':
-				printf("error\n");
+				//printf("error\n");
 				break;
 		}
 	}
@@ -102,10 +104,12 @@ int main(int argc,char *argv[]){
 	FD_ZERO(&kbd_allfds);
 	if(optind == argc){
 		fprintf(stderr,"error: no device file specified\n");
+		fflush(stderr);
 		exit(EXIT_FAILURE);
 	}else{
 		if ((kbd_eventfiles = (int*)malloc(sizeof(int)*(argc-optind))) == NULL){
 			fprintf(stderr,"error: cannot malloc kbd_eventfiles\n");
+			fflush(stderr);
 			exit(EXIT_FAILURE);
 		}
 		int fd_tmp=-1;
@@ -123,21 +127,25 @@ int main(int argc,char *argv[]){
 		}
 		if(num_usable_kbd_evfl<=0){
 			fprintf(stderr,"error: no usable device file\n");
+			fflush(stderr);
 			exit(EXIT_FAILURE);
 		}
 	}
 	if((kbd_uinputfiles=(int*)malloc(sizeof(int)*num_usable_kbd_evfl))==NULL){
 		fprintf(stderr,"error: cannot malloc kbd_uinputfiles\n");
+		fflush(stderr);
 		exit(EXIT_FAILURE);
 	}
 	struct libevdev **kbd_evdevs=NULL;
 	if((kbd_evdevs=(struct libevdev**)malloc(sizeof(struct libevdev*)*num_usable_kbd_evfl))==NULL){
 		fprintf(stderr,"error: cannot malloc kbd_evdevs\n");
+		fflush(stderr);
 		exit(EXIT_FAILURE);
 	}
 	struct libevdev_uinput **kbd_uidevs=NULL;
 	if((kbd_uidevs=(struct libevdev_uinput**)malloc(sizeof(struct libevdev_uinput*)*num_usable_kbd_evfl))==NULL){
 		fprintf(stderr,"error: cannot malloc evdev\n");
+		fflush(stderr);
 		exit(EXIT_FAILURE);
 	}
 	for(int k=0;k<num_usable_kbd_evfl;k++){
@@ -145,15 +153,18 @@ int main(int argc,char *argv[]){
 		if((uinput_fd_tmp=open("/dev/uinput",O_WRONLY))==-1){
 			if((uinput_fd_tmp=open("/dev/input/uinput",O_WRONLY))==-1){//I didnt choose && because when first open was successful and second doesnt, second one will destroy the result of first one's
 				fprintf(stderr,"error: couldn't open either /dev/uinput nor /dev/input/uinput\n");
+				fflush(stderr);
 				exit(EXIT_FAILURE);
 			}else{
 				kbd_uinputfiles[k]=uinput_fd_tmp;
 				if(libevdev_new_from_fd(kbd_eventfiles[k],&kbd_evdevs[k])!=0){
 					fprintf(stderr,"error: couldn't new kbd_evdevs\n");
+					fflush(stderr);
 					exit(EXIT_FAILURE);
 				}
 				if(libevdev_uinput_create_from_device(kbd_evdevs[k],kbd_uinputfiles[k],&kbd_uidevs[k])!=0){
 					fprintf(stderr,"error: couldn't create kbd_uidevs\n");
+					fflush(stderr);
 					exit(EXIT_FAILURE);
 				}
 			}
@@ -161,10 +172,12 @@ int main(int argc,char *argv[]){
 			kbd_uinputfiles[k]=uinput_fd_tmp;
 			if(libevdev_new_from_fd(kbd_eventfiles[k],&kbd_evdevs[k])!=0){
 				fprintf(stderr,"error: couldn't new kbd_evdevs\n");
+				fflush(stderr);
 				exit(EXIT_FAILURE);
 			}
 			if(libevdev_uinput_create_from_device(kbd_evdevs[k],kbd_uinputfiles[k],&kbd_uidevs[k])!=0){
 				fprintf(stderr,"error: couldn't create kbd_uidevs\n");
+				fflush(stderr);
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -189,12 +202,14 @@ int main(int argc,char *argv[]){
 	struct input_event *events;
 	if((events=(struct input_event*)malloc(sizeof(struct input_event)*num_usable_kbd_evfl))==NULL){
 		fprintf(stderr,"error: cannot malloc events\n");
+		fflush(stderr);
 		//prep_for_quit(num_usable_kbd_evfl,kbd_uidevs,mouse_uidev);
 		exit(EXIT_FAILURE);
 	}
 	struct event_result *results;
 	if((results=(struct event_result*)malloc(sizeof(struct event_result)*num_usable_kbd_evfl))==NULL){
 		fprintf(stderr,"error: cannot malloc results\n");
+		fflush(stderr);
 		//prep_for_quit(num_usable_kbd_evfl,kbd_uidevs,mouse_uidev);
 		exit(EXIT_FAILURE);
 	}
@@ -208,6 +223,7 @@ int main(int argc,char *argv[]){
 			if(FD_ISSET(kbd_eventfiles[j],&readfds)){
 				if(read(kbd_eventfiles[j],&events[j],sizeof(struct input_event))<sizeof(struct input_event)){
 					printf("error: cannot read from device\n");
+					fflush(stdout);
 					//prep_for_quit(num_usable_kbd_evfl,kbd_uidevs,mouse_uidev);
 					exit(EXIT_FAILURE);
 				}
@@ -217,10 +233,12 @@ int main(int argc,char *argv[]){
 						for(int l=0;l<results[j].num_events;l++){
 							if(libevdev_uinput_write_event(kbd_uidevs[j],results[j].events[l].type,results[j].events[l].code,results[j].events[l].value)!=0){
 								fprintf(stderr,"error: failed to write event\n");
+								fflush(stderr);
 								exit(EXIT_FAILURE);
 							}
 							if(libevdev_uinput_write_event(kbd_uidevs[j],EV_SYN,SYN_REPORT,0)!=0){
 								fprintf(stderr,"error: failed to write event\n");
+								fflush(stderr);
 								exit(EXIT_FAILURE);
 							}
 							usleep(20*micro_sec);
@@ -230,10 +248,12 @@ int main(int argc,char *argv[]){
 						for(int l=0;l<results[j].num_events;l++){
 							if(libevdev_uinput_write_event(mouse_uidev,results[j].events[l].type,results[j].events[l].code,results[j].events[l].value)!=0){
 								fprintf(stderr,"error: failed to write event\n");
+								fflush(stderr);
 								exit(EXIT_FAILURE);
 							}
 							if(libevdev_uinput_write_event(mouse_uidev,EV_SYN,SYN_REPORT,0)!=0){
 								fprintf(stderr,"error: failed to write event\n");
+								fflush(stderr);
 								exit(EXIT_FAILURE);
 							}
 							if(results[j].num_events==4 && l%2==1){
@@ -253,6 +273,7 @@ int main(int argc,char *argv[]){
 #endif
 							if(libevdev_uinput_write_event(mouse_uidev,results[j].events[l].type,results[j].events[l].code,results[j].events[l].value)!=0){
 								fprintf(stderr,"error: failed to write event\n");
+								fflush(stderr);
 								exit(EXIT_FAILURE);
 							}
 #ifdef DEBUG
@@ -272,6 +293,7 @@ int main(int argc,char *argv[]){
 						if(results[j].num_events%2 == 1){//奇数回だと、最後のSYNCが送られないので、ここで判別
 							if(libevdev_uinput_write_event(mouse_uidev,EV_SYN,SYN_REPORT,0)!=0){
 								fprintf(stderr,"error: failed to write event\n");
+								fflush(stderr);
 								exit(EXIT_FAILURE);
 							}
 #ifdef DEBUG
@@ -288,6 +310,7 @@ int main(int argc,char *argv[]){
 
 	//ioctl(kbd_eventfile,EVIOCGRAB,0);
 	printf("exit\n");
+	fflush(stdout);
 	//prep_for_quit(num_usable_kbd_evfl,kbd_uidevs,mouse_uidev);
 	return 0;
 }
@@ -437,8 +460,10 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				break;
 			case KEY_KPSLASH:
 				clear_shortcut_flags(&flags_pressed);
-				if(escape_activated){
+				if(escape_activated && event_to_process.value !=0){
 					val_mouse_mov->X--;
+					printf("X move speed: %d\n",val_mouse_mov->X);
+					fflush(stdout);
 				}else{
 					if(event_to_process.value == 1){
 						//printf(" KEY_KPSLASH\n");
@@ -449,8 +474,10 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				break;
 			case KEY_KPASTERISK:
 				clear_shortcut_flags(&flags_pressed);
-				if(escape_activated){
+				if(escape_activated && event_to_process.value !=0){
 					val_mouse_mov->X++;
+					printf("X move speed: %d\n",val_mouse_mov->X);
+					fflush(stdout);
 				}else{
 					if(event_to_process.value == 1){
 						//printf(" KEY_KPASTERISK\n");
@@ -461,8 +488,10 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				break;
 			case KEY_KPMINUS:
 				clear_shortcut_flags(&flags_pressed);
-				if(escape_activated){
+				if(escape_activated && event_to_process.value !=0){
 					val_mouse_mov->Y--;
+					printf("Y move speed: %d\n",val_mouse_mov->Y);
+					fflush(stdout);
 				}else{
 					if(event_to_process.value == 1){
 						//printf(" KEY_KPMINUS\n");
@@ -473,8 +502,10 @@ void process_input_event(struct input_event event_to_process,struct event_result
 				break;
 			case KEY_KPPLUS:
 				clear_shortcut_flags(&flags_pressed);
-				if(escape_activated){
+				if(escape_activated && event_to_process.value !=0){
 					val_mouse_mov->Y++;
+					printf("Y move speed: %d\n",val_mouse_mov->Y);
+					fflush(stdout);
 				}else{
 					if(event_to_process.value == 1){
 						//printf(" KEY_KPPLUS\n");
