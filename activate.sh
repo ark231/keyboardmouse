@@ -46,15 +46,6 @@ if [ "$(ps -a|grep "kbdmouse")" = "" ]; then
 		cat "$DIR_SCRIPT/$ERR_MSG_FIFO_NAME">/dev/null &
 	fi
 	pkexec bash -c "$DIR_SCRIPT/kbdmouse $($DIR_SCRIPT/search_device.sh) $X_mov_arg $Y_mov_arg 1>$DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME 2>$DIR_SCRIPT/$ERR_MSG_FIFO_NAME"
-
-	#pkexec $DIR_SCRIPT/kbdmouse $($DIR_SCRIPT/search_device.sh) 1>$DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME 2>$DIR_SCRIPT/$ERR_MSG_FIFO_NAME $X_mov_arg $Y_mov_arg &
-	#pkexec $DIR_SCRIPT/call_kbdmouse.sh $DIR_SCRIPT $NORMAL_MSG_FIFO_NAME $ERR_MSG_FIFO_NAME $X_mov_arg $Y_mov_arg &
-
-
-	#KBD_MOUSE_ERR_MSG=$(env DIR_SCRIPT=$DIR_SCRIPT cat $DIR_SCRIPT/kbdmouse_err_msg)
-	#if [ "$KBD_MOUSE_ERR_MSG" != "" ];then
-	#	notify-send -u critical -a kbdmouse -c ERROR "error message" "$KBD_MOUSE_ERR_MSG"
-	#fi
 	rm $DIR_SCRIPT/$ERR_MSG_FIFO_NAME
 	rm $DIR_SCRIPT/$NORMAL_MSG_FIFO_NAME
 else
