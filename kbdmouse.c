@@ -72,6 +72,7 @@ int find_max_fd(int[],int);
 bool requested_exit = false;//when true, mainloop will end
 
 int main(int argc,char *argv[]){
+	PRINTF("program start\n")
 	/*process args*/
 	struct option longopts[]={
 		{"X_mov",required_argument,0,'X'},
